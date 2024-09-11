@@ -2,6 +2,7 @@ import { Option } from 'nest-commander';
 import { BaseCommand, BaseCommandOptions } from './base.command';
 import { ConfigService, SpendService, WalletService } from 'src/providers';
 import { CliConfig, getFeeRate } from 'src/common';
+import fetch from 'node-fetch';
 
 export interface BoardcastCommandOptions extends BaseCommandOptions {
   maxFeeRate?: number;
@@ -65,22 +66,21 @@ export abstract class BoardcastCommand extends BaseCommand {
 
   async getFeeRate(): Promise<number> {
     const feeRate = this.configService.getFeeRate();
+    return await this.fetchFastestFee(feeRate);
+  }
 
-    if (feeRate > 0) {
-      return feeRate;
+  async fetchFastestFee(defaultFee: number): Promise<number> {
+    try {
+      const url =
+        'https://mempool.fractalbitcoin.io/api/v1/fees/mempool-blocks';
+      const response = await fetch(url);
+      const data = await response.json();
+      const feeRange = data[0]?.feeRange;
+      const fastestFee = feeRange ? feeRange[feeRange.length - 4] : null;
+      return fastestFee || defaultFee;
+    } catch (error) {
+      console.error('Error fetching fee:', error);
+      return defaultFee;
     }
-
-    const networkFeeRate = await getFeeRate(
-      this.configService,
-      this.walletService,
-    );
-
-    const maxFeeRate = this.configService.getMaxFeeRate();
-
-    if (maxFeeRate > 0) {
-      return Math.min(maxFeeRate, networkFeeRate);
-    }
-
-    return networkFeeRate;
   }
 }

@@ -86,6 +86,7 @@ export class MintCommand extends BoardcastCommand {
         for (let index = 0; index < MAX_RETRY_COUNT; index++) {
           await this.merge(token, address);
           const feeRate = await this.getFeeRate();
+          console.log(`当前feeRate: ${feeRate}`);
           const feeUtxos = await this.getFeeUTXOs(address);
           if (feeUtxos.length === 0) {
             console.warn('Insufficient satoshis balance!');
